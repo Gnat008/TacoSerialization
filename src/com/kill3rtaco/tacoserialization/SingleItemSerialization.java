@@ -1,10 +1,12 @@
 package com.kill3rtaco.tacoserialization;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
@@ -46,7 +48,7 @@ public class SingleItemSerialization {
 	public static JSONObject serializeItem(ItemStack items) {
 		return serializeItems(items, false, 0);
 	}
-	
+
 	private static JSONObject serializeItems(ItemStack items, boolean useIndex, int index) {
 		try {
 			JSONObject values = new JSONObject();
@@ -57,6 +59,7 @@ public class SingleItemSerialization {
 			int data = items.getDurability();
 			boolean hasMeta = items.hasItemMeta();
 			String name = null, enchants = null;
+            String[] flags = null;
 			String[] lore = null;
 			int repairPenalty = 0;
 			Material mat = items.getType();
@@ -88,6 +91,14 @@ public class SingleItemSerialization {
 					}
 				}
 
+                if (meta.getItemFlags() != null && !meta.getItemFlags().isEmpty()) {
+                    List<String> flagsList = new ArrayList<String>();
+                    for (ItemFlag flag : meta.getItemFlags()) {
+                        flagsList.add(flag.toString());
+                    }
+                    flags = flagsList.toArray(new String[flagsList.size()]);
+                }
+
 			}
 
 			values.put("id", id);
@@ -99,6 +110,8 @@ public class SingleItemSerialization {
 				values.put("name", name);
 			if(enchants != null)
 				values.put("enchantments", enchants);
+            if (flags != null)
+                values.put("flags", flags);
 			if(lore != null)
 				values.put("lore", lore);
 			if(repairPenalty != 0)
@@ -166,12 +179,20 @@ public static ItemStack getItem(JSONObject item, int index) {
 			int data = item.getInt("data");
 			String name = null;
 			Map<Enchantment, Integer> enchants = null;
+            ArrayList<String> flags = null;
 			ArrayList<String> lore = null;
 			int repairPenalty = 0;
 			if(item.has("name"))
 				name = item.getString("name");
 			if(item.has("enchantments"))
 				enchants = EnchantmentSerialization.getEnchantments(item.getString("enchantments"));
+            if (item.has("flags")) {
+                JSONArray f = item.getJSONArray("flags");
+                flags = new ArrayList<String>();
+                for (int i = 0; i < f.length(); i++) {
+                    flags.add(f.getString(i));
+                }
+            }
 			if(item.has("lore")) {
 				JSONArray l = item.getJSONArray("lore");
 				lore = new ArrayList<String>();
@@ -206,6 +227,11 @@ public static ItemStack getItem(JSONObject item, int index) {
 			ItemMeta meta = stuff.getItemMeta();
 			if(name != null)
 				meta.setDisplayName(name);
+            if (flags != null) {
+                for (String flag : flags) {
+                    meta.addItemFlags(ItemFlag.valueOf(flag));
+                }
+            }
 			if(lore != null)
 				meta.setLore(lore);
 			stuff.setItemMeta(meta);
